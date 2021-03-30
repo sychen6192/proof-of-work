@@ -4,7 +4,11 @@ import struct
 
 
 def lilEndian(num, digit):
-    hexNum = hex(num)[2:]
+    # padding to even digits
+    if len(hex(num)) % 2 != 0:
+        hexNum = '0'+hex(num)[2:]
+    else:
+        hexNum = hex(num)[2:]
     ba = bytearray.fromhex(hexNum)
     ba.reverse()
     s = ''.join(format(x, '02x') for x in ba)
@@ -30,24 +34,25 @@ def mine(version, prev_block, merkle_root, _timestamp, bits):
     timestamp = int(datetime.datetime.strptime(_timestamp, "%Y-%m-%d %H:%M:%S").timestamp())
     timestampHex = lilEndian(timestamp, 8)
     blockData = '01000000' + prev_block + merkle_root + timestampHex + hex(bits)[2:]
-    difficulty = 8
+
+    difficulty = 10
     target = '0x'+'0'*difficulty+'F'*(64-difficulty)
 
     mined = False
-    blockDataHex = int(blockData.encode(), 16)
+
     nonce = 0
-    #
+
     while not mined:
         print('Nonce:', str(hex(nonce)))
-        blockDataHexWithNonce = blockDataHex + nonce
 
+        nonceHex = lilEndian(nonce, 8)
+        blockDataHexWithNonce = int((blockData+nonceHex).encode(), 16)
         # Apply double-SHA-256
         doubled_hash = get_sha_256_hash(get_sha_256_hash(hex(blockDataHexWithNonce).encode()).encode())
-        if nonce == '0x7c2bac1b':
-            print('Block hash:', doubled_hash)
         mined = block_hash_less_than_target(doubled_hash, target)
 
         if not mined:
             nonce += 1
         else:
             print('Solution Founded!')
+            print('=>Block hash:', doubled_hash)
